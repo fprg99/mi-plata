@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#FFF4F8">
 <title>Mi dinero</title>
@@ -265,6 +265,101 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .consejo .acts-copia .btn{width:auto;flex:1}
 .legal{font-size:11px;color:var(--tinta-suave);text-align:center;margin-top:14px;line-height:1.5}
 .estado{font-size:12px;color:var(--menta-txt);text-align:center;min-height:16px;font-weight:600}
+
+/* ==================== diseño v2 ==================== */
+:root{
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --sombra:0 1px 2px rgba(74,46,61,.05), 0 10px 28px -16px rgba(196,85,126,.45);
+  --nav-h:64px;
+}
+.app{padding-bottom:calc(var(--nav-h) + 40px + env(safe-area-inset-bottom))}
+.card{border-radius:18px;border-color:rgba(246,220,230,.8)}
+
+/* cabecera con degradé */
+.top{background:linear-gradient(165deg,#FBD3E2 0%,#F6BCD3 55%,#F1A9C8 100%);border-bottom:none;border-radius:0 0 22px 22px;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 12px;box-shadow:0 10px 24px -18px rgba(196,85,126,.7)}
+.hi span{color:#7A5466}
+.kpi{background:rgba(255,255,255,.72);border:none;border-radius:13px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.kpi .k{color:#8E6478}
+
+/* barra inferior (teléfono) */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:50;margin:0;display:flex;gap:4px;
+  padding:6px 10px calc(6px + env(safe-area-inset-bottom));
+  background:rgba(255,255,255,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-top:1px solid var(--rosa-linea);box-shadow:0 -8px 24px -20px rgba(74,46,61,.5)}
+.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 2px 6px;border:none;border-radius:14px;
+  font-size:11px;font-weight:700;color:var(--tinta-suave);background:transparent;-webkit-tap-highlight-color:transparent}
+.tabs button svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tabs button.on{color:var(--rosa-fuerte);background:var(--rosa-suave);border-bottom-color:transparent}
+.tabs button.on svg{stroke-width:2}
+
+/* tarjeta principal: "Podés gastar por día" */
+.hero{border:none;color:#fff;padding:18px 18px 0;position:relative;overflow:hidden;
+  box-shadow:0 18px 34px -22px rgba(74,46,61,.75)}
+.hero::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at 88% -10%,rgba(255,255,255,.32),transparent 55%)}
+.hero>*{position:relative}
+.hero.ok{background:linear-gradient(145deg,#4FB08D 0%,#2E8A69 60%,#26755A 100%)}
+.hero.mid{background:linear-gradient(145deg,#E2B04F 0%,#C38C24 60%,#A8791A 100%)}
+.hero.bad{background:linear-gradient(145deg,#E07A8C 0%,#C9566C 60%,#A83E55 100%)}
+.hero .k{color:rgba(255,255,255,.85)}
+.hero.ok .big,.hero.mid .big,.hero.bad .big{color:#fff;background-image:linear-gradient(transparent 66%,rgba(255,255,255,.22) 66%)}
+.hero .cuando{color:rgba(255,255,255,.88)}
+.recibo,.recibo::after{background:rgba(255,255,255,.16)}
+.recibo .rt{color:rgba(255,255,255,.9)}
+.rrow.sum{border-top-color:rgba(255,255,255,.5)}
+.rrow.div{color:#fff}
+.hero-foot{color:rgba(255,255,255,.9)}
+.hero-foot b{color:#fff!important}
+
+/* consejos con franja de color */
+.consejo{position:relative;overflow:hidden;border:none;padding-left:19px;box-shadow:var(--sombra)}
+.consejo::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+.consejo.ok::before{background:var(--menta-txt)} .consejo.mid::before{background:var(--sol-txt)}
+.consejo.bad::before{background:var(--coral-txt)} .consejo.info::before{background:var(--lila-txt)}
+
+/* barras que crecen */
+.catbar .cb,.hist-bar .hb{transition:width .8s var(--ease)}
+.trend-bar .tb{transition:height .8s var(--ease)}
+.prog div{transition:width .8s var(--ease)}
+
+/* aviso flotante (por encima de la barra) */
+#estado{position:fixed;left:50%;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom));transform:translate(-50%,0);
+  z-index:70;min-height:0;max-width:calc(100% - 40px);padding:10px 16px;border-radius:999px;
+  background:var(--tinta);color:#fff!important;font-size:13px;box-shadow:0 12px 26px -12px rgba(74,46,61,.8);
+  transition:opacity .25s var(--ease),transform .25s var(--ease)}
+#estado.malo{background:var(--coral-txt)}
+#estado:empty{opacity:0;transform:translate(-50%,10px);pointer-events:none}
+
+/* compu: menú lateral */
+@media (min-width:1024px){
+  body{padding-left:232px}
+  .app{max-width:720px;padding-bottom:60px}
+  .tabs{top:0;right:auto;width:232px;flex-direction:column;gap:6px;padding:28px 16px;border-top:none;border-right:1px solid var(--rosa-linea);box-shadow:none}
+  .tabs::before{content:"Mi plata";font-family:var(--display);font-weight:700;font-size:22px;color:var(--rosa-fuerte);padding:0 12px 14px}
+  .tabs button{flex:0 0 auto;flex-direction:row;gap:12px;padding:11px 12px;font-size:14.5px;justify-content:flex-start}
+  .top{border-radius:0 0 24px 24px}
+  #estado{bottom:28px;left:calc(50% + 116px)}
+}
+
+/* movimiento (solo si el teléfono no pide reducirlo) */
+@media (prefers-reduced-motion:no-preference){
+  section.entra>*{animation:entrar .55s var(--ease) both}
+  section.entra>*:nth-child(2){animation-delay:.05s}
+  section.entra>*:nth-child(3){animation-delay:.1s}
+  section.entra>*:nth-child(4){animation-delay:.15s}
+  section.entra>*:nth-child(5){animation-delay:.2s}
+  section.entra>*:nth-child(6){animation-delay:.25s}
+  section.entra>*:nth-child(n+7){animation-delay:.3s}
+  @keyframes entrar{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .btn,.chip,.tabs button,.tick{transition:transform .15s var(--ease),background-color .2s,color .2s}
+  .btn:active,.chip:active,.tabs button:active{transform:scale(.96)}
+  .tick:active{transform:scale(.88)}
+  .modal:not(.hide){animation:fondo .2s ease both}
+  .modal:not(.hide) .box{animation:subir .35s var(--ease) both}
+  @keyframes fondo{from{opacity:0}to{opacity:1}}
+  @keyframes subir{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -277,13 +372,13 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
       <div class="kpi"><div class="k">Gastar hoy</div><div class="v num" id="kHoy">—</div></div>
       <div class="kpi"><div class="k" id="kMetaK">Falta meta</div><div class="v num" id="kMeta">—</div></div>
     </div>
-    <nav class="tabs">
-      <button data-tab="hoy" class="on">Hoy</button>
-      <button data-tab="pres">Presupuesto</button>
-      <button data-tab="aho">Ahorros</button>
-      <button data-tab="hist">Historial</button>
-    </nav>
   </header>
+  <nav class="tabs" aria-label="Secciones">
+    <button data-tab="hoy" class="on" aria-label="Hoy"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><span>Hoy</span></button>
+    <button data-tab="pres" aria-label="Presupuesto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 2.6A9 9 0 0 1 21.4 9H15z"/></svg><span>Presupuesto</span></button>
+    <button data-tab="aho" aria-label="Ahorros"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11.5c0-3.6 3.2-6 7.2-6 3.4 0 6 1.6 6.8 4.2H21v4h-2a6 6 0 0 1-2.4 2.8V20h-2.8v-1.6h-3.6V20H7.4v-2.6C5.9 16.2 5 14.2 5 11.5z"/><path d="M9.5 5.9 8.4 3.6h3.1"/><circle cx="15.5" cy="10.5" r=".6"/></svg><span>Ahorros</span></button>
+    <button data-tab="hist" aria-label="Historial"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 2.8v3.4M16 2.8v3.4M8 14.5h2M14 14.5h2"/></svg><span>Historial</span></button>
+  </nav>
 
   <div class="aviso hide" id="aviso"></div>
 
@@ -418,7 +513,7 @@ var MODO = (function(){
   }catch(e){ return 'ninguno'; }
 })();
 function estado(txt,malo){
-  var e=el('estado'); e.textContent=txt||''; e.style.color = malo? 'var(--coral-txt)':'var(--menta-txt)';
+  var e=el('estado'); e.textContent=txt||''; e.classList.toggle('malo', !!malo);
   if(txt){ clearTimeout(estado._t); estado._t=setTimeout(function(){ e.textContent=''; },2600); }
 }
 function avisoStorage(){
@@ -908,6 +1003,85 @@ function textoSlider(falta, ap, feDeseo){
 }
 
 /* ==================== render general ==================== */
+
+/* ==================== animaciones ==================== */
+// Solo decorativas: si el teléfono pide reducir movimiento, no se anima nada.
+var MOV = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function easeOut(t){ return 1-Math.pow(1-t,3); }
+// Lleva el número que muestra un elemento de 'desde' a 'hasta' (formato "Gs. 1.234" o "1.234").
+function tweenNum(e, desde, hasta, ms){
+  if(!MOV || !e || document.hidden || desde===hasta) return;
+  var fin = e.textContent, m = fin.match(/^(Gs\. |−|-)?([\d.]+)$/);
+  if(!m) return;
+  var pre = m[1]||'', t0 = null, id = {}, ultimo = null;
+  e._tw = id;
+  function paso(ts){
+    if(e._tw!==id) return;
+    if(ultimo!==null && e.textContent!==ultimo) return; // otro render ya lo cambió
+    if(t0===null) t0 = ts;
+    var k = Math.min(1,(ts-t0)/ms);
+    ultimo = k<1 ? pre+fmt.format(Math.round(desde+(hasta-desde)*easeOut(k))) : fin;
+    e.textContent = ultimo;
+    if(k<1) requestAnimationFrame(paso);
+  }
+  requestAnimationFrame(paso);
+}
+// Cuando cambia un número clave (al anotar un gasto, por ejemplo), pasa suave del valor anterior al nuevo.
+var _valPrev = {};
+function numVivo(clave, e, valor){
+  var prev = _valPrev[clave];
+  _valPrev[clave] = valor;
+  if(prev!==undefined && prev!==valor) tweenNum(e, prev, valor, 650);
+}
+var SEL_NUMS = '.hero .big, .balance .v, .hist-grid b';
+function contarDesdeCero(scope){
+  Array.prototype.forEach.call(scope.querySelectorAll(SEL_NUMS), function(e){
+    var m = e.textContent.match(/^(Gs\. |−|-)?([\d.]+)$/);
+    if(m) tweenNum(e, 0, num(m[2]), 900);
+  });
+}
+// Barras: se usa setTimeout y no requestAnimationFrame, así siempre terminan en su valor real.
+function crecerBarras(scope){
+  var lista = [];
+  Array.prototype.forEach.call(scope.querySelectorAll('.catbar .cb, .prog > div, .hist-bar .hb, .trend-bar .tb'), function(e){
+    var prop = e.classList.contains('tb') ? 'height' : 'width', v = e.style[prop];
+    if(!v || v==='0%') return;
+    e.style.transition = 'none'; e.style[prop] = '0%'; lista.push([e, prop, v]);
+  });
+  void scope.offsetWidth;
+  setTimeout(function(){
+    lista.forEach(function(x,i){
+      x[0].style.transition = ''; x[0].style.transitionDelay = Math.min(i*35,450)+'ms'; x[0].style[x[1]] = x[2];
+      setTimeout(function(){ x[0].style.transitionDelay = ''; }, 1500);
+    });
+  }, 30);
+}
+function dibujarTorta(scope){
+  var segs = [].slice.call(scope.querySelectorAll('.donut circle[stroke-dasharray]'));
+  segs.forEach(function(c){
+    var p = c.getAttribute('stroke-dasharray').split(' ').map(parseFloat);
+    c.style.transition = 'none'; c.style.strokeDasharray = '0 '+(p[0]+p[1]);
+  });
+  void scope.offsetWidth;
+  setTimeout(function(){
+    segs.forEach(function(c,i){
+      c.style.transition = 'stroke-dasharray .9s cubic-bezier(.2,.8,.2,1) '+(i*0.08)+'s';
+      c.style.strokeDasharray = c.getAttribute('stroke-dasharray');
+      setTimeout(function(){ c.style.transition = ''; }, 1100+i*80);
+    });
+  }, 30);
+}
+// Al abrir una sección: entrada escalonada, números desde cero, barras y torta.
+function entrarPanel(id){
+  if(!MOV) return;
+  var p = el('tab-'+id); if(!p) return;
+  p.classList.remove('entra'); void p.offsetWidth; p.classList.add('entra');
+  clearTimeout(p._tEntra); p._tEntra = setTimeout(function(){ p.classList.remove('entra'); }, 1000);
+  contarDesdeCero(p);
+  crecerBarras(p);
+  dibujarTorta(p);
+}
+
 function render(guardarTambien){
   renderTop();
   el('ultCopia').textContent = textoUltCopia();
@@ -915,6 +1089,11 @@ function render(guardarTambien){
   if(tabActual==='pres') renderPres();
   if(tabActual==='aho') renderAho();
   if(tabActual==='hist') renderHist();
+  var c = calc();
+  numVivo('saldo', el('kSaldo'), num(S.saldo));
+  numVivo('hoy', el('kHoy'), Math.max(0,Math.round(c.porDia)));
+  var big = document.querySelector('#tab-hoy .hero .big');
+  if(big && tabActual==='hoy') numVivo('big', big, Math.max(0,Math.round(c.porDia)));
   if(guardarTambien!==false) guardar();
 }
 function irTab(t){
@@ -922,6 +1101,7 @@ function irTab(t){
   ['hoy','pres','aho','hist'].forEach(function(k){ el('tab-'+k).classList.toggle('hide', k!==t); });
   Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function(b){ b.classList.toggle('on', b.dataset.tab===t); });
   render(false);
+  entrarPanel(t);
   window.scrollTo(0,0);
 }
 
@@ -1391,6 +1571,7 @@ el('modal').addEventListener('click', function(ev){ if(ev.target.id==='modal') e
 cargar().then(function(){
   if(!S.proxCobro || dif(S.proxCobro, hoyISO()) < -40) S.proxCobro = proxFinDeMes();
   render(false);
+  entrarPanel(tabActual);
 }).catch(function(){ render(false); });
 
 /* sin conexión: sw.js guarda la app en el teléfono */
