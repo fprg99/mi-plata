@@ -905,13 +905,12 @@ function consejos(){
         return;
       }
       if(g.id!=='var' || ci.trans < 5) return;
-      var proy = Math.round(real/ci.frac);
-      if(proy > meta*1.1){
-        var quedan = Math.max(1, ci.total-ci.trans), porDia = Math.floor((meta-real)/quedan);
-        L.push({id:'ritmo-'+ct.id, nivel:2, peso:proy-meta, firma:''+redondo(real), t:'A este ritmo «'+ct.nm+'» se pasa',
-          p:'Vas '+gs(real)+' y el mes termina cerca de '+gs(proy)+' (te propusiste '+gs(meta)+'). '+(porDia < 5000
-            ? 'Te quedan solo '+gs(meta-real)+' para los '+quedan+' días que faltan.'
-            : 'Para no pasarte, gastá hasta '+gs(porDia)+' por día en esto.')});
+      // Aviso solo si ya usó casi todo y todavía falta bastante para el cobro.
+      var usado = real/meta, pasoMes = ci.trans/ci.total, quedan = Math.max(1, ci.total-ci.trans);
+      if(usado >= 0.85 && usado - pasoMes >= 0.15){
+        L.push({id:'limite-'+ct.id, nivel:2, peso:real, firma:''+redondo(real), t:'«'+ct.nm+'» está casi al límite',
+          p:'Ya usaste '+gs(real)+' de los '+gs(meta)+' que te propusiste para esto ('+Math.round(usado*100)+'%). '+
+            'Te quedan '+gs(meta-real)+' y faltan '+quedan+(quedan===1?' día':' días')+' para el cobro.'});
       }
     });
   });
@@ -920,9 +919,10 @@ function consejos(){
   var H = S.historial||[], ult = H[H.length-1];
   if(ult && num(ult.gastado)>0 && ci.trans>=5){
     var gvA = grupoVar(), varReal = gvA? totalGrupo(gvA,'real') : 0, gastadoAhora = gastadoCicloTotal(), proyT = Math.round(gastadoAhora - varReal + varReal/ci.frac); // los fijos no crecen con los días
+    var faltanM = Math.max(1, ci.total-ci.trans);
     if(proyT > num(ult.gastado)*1.2)
       L.push({id:'masQueAntes', nivel:2, peso:proyT-num(ult.gastado), firma:''+redondo(gastadoAhora), t:'Vas gastando más que el mes pasado',
-        p:'A este ritmo el mes cierra cerca de '+gs(proyT)+'. En '+esc(ult.etiqueta)+' gastaste '+gs(ult.gastado)+'. Mirá en Presupuesto qué categoría está tirando para arriba.'});
+        p:'Ya llevás '+gs(gastadoAhora)+' y todavía faltan '+faltanM+(faltanM===1?' día':' días')+'. En todo '+esc(ult.etiqueta)+' gastaste '+gs(ult.gastado)+'. Mirá en Presupuesto qué categoría está tirando para arriba.'});
   }
 
   // 6. aporte del mes para la meta
@@ -948,16 +948,15 @@ function consejos(){
   }
 
   // 8. gasto fuera de lo común
-  var porCat = {};
-  S.gastos.forEach(function(g){ if(g.cat){ (porCat[g.cat] = porCat[g.cat]||[]).push(num(g.mt)); } });
   S.gastos.forEach(function(g){
-    var xs = porCat[g.cat]||[];
-    if(xs.length < 3 || num(g.mt) < 100000) return;
-    var med = mediana(xs);
+    var otros = S.gastos.filter(function(x){ return x.cat===g.cat && x.id!==g.id; }).map(function(x){ return num(x.mt); });
+    if(otros.length < 3 || num(g.mt) < 100000) return;
+    var med = mediana(otros);
     if(med>0 && num(g.mt) > med*2.5){
       var ct = catPorId(g.cat);
-      L.push({id:'raro-'+g.id, nivel:1, peso:num(g.mt)-med, firma:'1', t:'Un gasto más grande de lo normal',
-        p:'Anotaste '+gs(g.mt)+(g.nm?' («'+esc(g.nm)+'»)':'')+' en '+(ct?esc(ct.nm):'una categoría')+', cuando lo habitual ahí es '+gs(med)+'. Si fue un error de tipeo, corregilo en «Lo que anotaste».'});
+      L.push({id:'raro-'+g.id, nivel:1, peso:num(g.mt)-med, firma:'1', t:'¿Este monto está bien?',
+        p:'Anotaste un gasto de '+gs(g.mt)+(g.nm?' («'+esc(g.nm)+'»)':'')+' en '+(ct?esc(ct.nm):'una categoría')+'. Tus otros gastos ahí suelen ser de unos '+gs(med)+'. '+
+          'Si está bien, tocá «Entendido». Si te equivocaste al escribirlo, corregilo en «Lo que anotaste».'});
     }
   });
 
@@ -1064,24 +1063,25 @@ function renderEvolucion(H){
   if(!conCat.length){
     s.push('<p class="sub" style="margin:0">La comparación por categoría empieza después del próximo cierre de mes: desde ahora cada cierre guarda cuánto gastaste en cada cosa.</p>');
   }else{
-    s.push('<p class="sub" style="margin:0 0 8px">Promedio de '+(conCat.length===1?'tu último mes':'tus últimos '+conCat.length+' meses')+' contra lo que va a dar este mes si seguís a este ritmo.</p>');
+    var pctMes = Math.round(ci.trans/ci.total*100);
+    s.push('<p class="sub" style="margin:0 0 8px">Lo que llevás gastado este mes contra tu promedio de '+(conCat.length===1?'tu último mes':'tus últimos '+conCat.length+' meses')+'. Ya pasó el '+pctMes+'% del mes.</p>');
     var filas = [];
     S.grupos.forEach(function(g){ if(g.id==='aho') return; g.cats.forEach(function(ct){
       var vals = conCat.map(function(m){ return m.porCat[ct.id]? num(m.porCat[ct.id].real) : null; }).filter(function(v){ return v!==null; });
       if(!vals.length) return;
       var prom = Math.round(vals.reduce(function(a,v){ return a+v; },0)/vals.length);
       if(prom<=0 && num(ct.real)<=0) return;
-      var proy = g.id==='var'? Math.round(num(ct.real)/ci.frac) : num(ct.real);
-      filas.push({nm:ct.nm, prom:prom, proy:proy, d: prom>0? Math.round((proy-prom)/prom*100) : null});
+      var lleva = num(ct.real);
+      filas.push({nm:ct.nm, prom:prom, proy:lleva, d: prom>0? Math.round(lleva/prom*100) : null});
     }); });
     filas.sort(function(a,b){ return (b.d===null?0:b.d)-(a.d===null?0:a.d); });
     s.push('<div class="evo-cats">');
     filas.forEach(function(x){
-      var dtxt = (ci.trans<5 || x.d===null)? '—' : (x.d>0?'+':'')+x.d+'%';
-      var cls = (ci.trans<5 || x.d===null)? '' : (x.d>15? 'sube' : (x.d<-15? 'baja' : ''));
+      var dtxt = x.d===null? '—' : x.d+'%';
+      var cls = x.d===null? '' : (x.d>100? 'sube' : (x.d < pctMes-15? 'baja' : ''));
       s.push('<div class="evo-cat"><span class="nm">'+esc(x.nm)+'</span><span class="num">'+gsc(x.prom)+'</span><span class="num">'+gsc(x.proy)+'</span><span class="num d '+cls+'">'+dtxt+'</span></div>');
     });
-    s.push('</div><div class="evo-ley"><span>Promedio · Este mes · Diferencia</span>'+(ci.trans<5?'<span>Los primeros 5 días no se compara: es muy pronto.</span>':'')+'</div>');
+    s.push('</div><div class="evo-ley"><span>Promedio · Llevás este mes · Cuánto del promedio usaste</span></div>');
   }
   s.push('</div>');
   return s.join('');
