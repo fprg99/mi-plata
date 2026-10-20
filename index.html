@@ -331,6 +331,36 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 #estado.malo{background:var(--coral-txt)}
 #estado:empty{opacity:0;transform:translate(-50%,10px);pointer-events:none}
 
+
+/* asesor */
+.asesor{margin-top:16px;display:grid;gap:10px}
+.asesor .consejo{margin-top:0}
+.as-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.as-acts .btn.mini{flex:0 0 auto}
+.consejo .as-acts .btn.ghost{background:rgba(255,255,255,.7);border-color:currentColor;color:inherit}
+.as-mas{border:none;background:none;color:var(--rosa-fuerte);font-weight:700;font-size:13.5px;padding:4px;cursor:pointer;justify-self:center}
+.as-nota{font-size:11px;color:var(--tinta-suave);text-align:center;margin:0}
+/* evolución */
+.evo{margin-top:12px}
+.evo-scroll{overflow-x:auto;padding:0 2px;-webkit-overflow-scrolling:touch}
+.evo .trend{gap:6px}
+.evo .trend-bar{position:relative;height:96px}
+.evo .trend-col.actual .trend-bar{outline:1.5px dashed var(--rosa);outline-offset:-1.5px}
+.evo-v{font-size:9.5px;font-weight:700;color:var(--tinta-suave);margin-bottom:3px;white-space:nowrap}
+.evo-ref{position:absolute;left:0;right:0;height:0;border-top:2px dashed var(--lila-txt);z-index:2}
+.trend-bar .tb.aho{background:linear-gradient(180deg,var(--rosa),var(--rosa-fuerte))}
+.evo-ley{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11px;color:var(--tinta-suave);margin-top:10px}
+.evo-ley i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.evo-ley i.ok{background:var(--menta)} .evo-ley i.bad{background:var(--coral)}
+.evo-ley i.ref{height:0;border-top:2px dashed var(--lila-txt);border-radius:0}
+.evo-cats{display:grid;gap:2px}
+.evo-cat{display:grid;grid-template-columns:minmax(0,1fr) 78px 78px 52px;gap:6px;align-items:center;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--rosa-linea)}
+.evo-cat:last-child{border-bottom:none}
+.evo-cat .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.evo-cat .num{text-align:right}
+.evo-cat .d{font-weight:700;color:var(--tinta-suave)}
+.evo-cat .d.sube{color:var(--coral-txt)} .evo-cat .d.baja{color:var(--menta-txt)}
+
 /* compu: menú lateral */
 @media (min-width:1024px){
   body{padding-left:232px}
@@ -562,7 +592,7 @@ function cargar(){
 }
 function fusionar(def,d){
   var out=def;
-  ['nombre','saldo','proxCobro','ingresoEstimado','ultimoCicloMes','cicloInicio','ultimoRespaldo','respaldoPosponer'].forEach(function(k){ if(d[k]!==undefined) out[k]=d[k]; });
+  ['nombre','saldo','proxCobro','ingresoEstimado','ultimoCicloMes','cicloInicio','ultimoRespaldo','respaldoPosponer','asesorOcultos'].forEach(function(k){ if(d[k]!==undefined) out[k]=d[k]; });
   ['cobros','ingresosExtra','gastos','ingresos','grupos','pendientes','reservas','metas','historial'].forEach(function(k){ if(Array.isArray(d[k])) out[k]=d[k]; });
   return out;
 }
@@ -698,7 +728,7 @@ function renderHoy(){
   s.push('<div class="hero-foot">'+foot+'</div>');
   s.push('</div>');
 
-  s.push('<div class="consejo '+cs.cls+'"><b>'+cs.t+'</b>'+cs.p+'</div>');
+  s.push(renderAsesor(c, cs));
   var rc = recordatorioCopia();
   if(rc) s.push(rc);
 
@@ -811,6 +841,256 @@ function renderHoy(){
 
   el('tab-hoy').innerHTML = s.join('');
   restaurarCampos();
+}
+
+
+/* ==================== asesor ==================== */
+// Consejos por reglas, calculados en el teléfono con sus propios números (nada sale del celular).
+// nivel: 3 urgente · 2 atención · 1 idea · 0 bien. Se ordenan por nivel y después por impacto (peso).
+var asesorAbierto = false;
+function cicloInfo(){
+  var hoy = hoyISO();
+  var ini = S.cicloInicio || correrMes(S.proxCobro, -1);
+  var total = Math.max(1, dif(S.proxCobro, ini));
+  var trans = Math.min(total, Math.max(0, dif(hoy, ini)));
+  return {ini:ini, total:total, trans:trans, frac:Math.max(0.15, trans/total)};
+}
+function grupoVar(){ return S.grupos.filter(function(g){ return g.id==='var'; })[0]; }
+function grupoAho(){ return S.grupos.filter(function(g){ return g.id==='aho'; })[0]; }
+function totalMetasTodo(){ return S.grupos.reduce(function(a,g){ return a+totalGrupo(g,'meta'); },0); }
+function redondo(n){ return Math.round(num(n)/10000); } // para la firma: cambios chicos no reviven el consejo
+function mediana(xs){ var a=xs.slice().sort(function(x,y){ return x-y; }), m=Math.floor(a.length/2); return a.length? (a.length%2? a[m] : (a[m-1]+a[m])/2) : 0; }
+function mesesTxt(n){ return n===1? '1 mes' : n+' meses'; }
+
+function consejos(){
+  var c = calc(), ci = cicloInfo(), L = [], hoy = hoyISO();
+  if(num(S.saldo)===0 && S.gastos.length===0)
+    return [{id:'empezar', nivel:1, peso:0, firma:'1', t:'Empecemos por acá', p:'Cargá abajo cuánto tenés hoy en la cuenta y listo: el número grande se calcula solo. Después vas anotando cada gasto y el panel se acomoda.'}];
+
+  // 1. no alcanza para lo que vence antes del cobro
+  if(c.libre < 0)
+    L.push({id:'noAlcanza', nivel:3, peso:-c.libre, firma:''+redondo(c.libre), t:'Ojo con este tramo',
+      p:'Con lo que hay en la cuenta no llegan a cubrirse los pagos que vencen antes del '+fechaCorta(S.proxCobro)+'. Faltan '+gs(-c.libre)+'. Mirá si algún pago se puede correr para después del cobro.'});
+
+  // 2. pagos vencidos o que vencen en 3 días
+  var venc = S.pendientes.filter(function(p){ return !p.pagado && dif(p.fe, hoy) < 0; });
+  var prox = S.pendientes.filter(function(p){ var d=dif(p.fe, hoy); return !p.pagado && d>=0 && d<=3; });
+  if(venc.length){
+    var tv = venc.reduce(function(a,p){ return a+num(p.mt); },0);
+    L.push({id:'vencidos', nivel:3, peso:tv, firma:venc.map(function(p){ return p.id; }).join(','), t:venc.length===1? '«'+venc[0].nm+'» ya venció' : venc.length+' pagos vencidos',
+      p:(venc.length===1? 'Venció el '+fechaCorta(venc[0].fe)+' y son '+gs(tv)+'.' : 'Suman '+gs(tv)+'.')+' Si ya lo pagaste, tildalo en «Pagos pendientes» para que se descuente del saldo.'});
+  }
+  if(prox.length){
+    var tp = prox.reduce(function(a,p){ return a+num(p.mt); },0);
+    L.push({id:'vencePronto', nivel:2, peso:tp, firma:prox.map(function(p){ return p.id; }).join(','), t:prox.length===1? '«'+prox[0].nm+'» '+(urgencia(prox[0]).txt==='vence hoy'? 'vence hoy' : 'vence '+urgencia(prox[0]).txt) :prox.length+' pagos vencen en estos días',
+      p:'Tené separados '+gs(tp)+'. Ya están descontados de lo que podés gastar por día, así que no te vas a llevar sorpresas.'});
+  }
+
+  // 3. ritmo del día
+  if(c.libre >= 0 && c.estado==='bad')
+    L.push({id:'frenar', nivel:2, peso:c.ref*c.dias, firma:''+redondo(c.libre), t:'Semana de frenar',
+      p:'Te quedan '+gs(c.libre)+' para '+c.dias+' días. Es poco: esta es semana de cocinar en casa y dejar el delivery para cuando entre el sueldo. Nada de drama, son '+c.dias+' días.'});
+  else if(c.estado==='mid')
+    L.push({id:'justa', nivel:2, peso:c.ref*c.dias/2, firma:''+redondo(c.porDia), t:'Vas justa pero llegás',
+      p:'Estás por debajo de tu ritmo normal de gasto diario. Si mantenés '+gs(c.porDia)+' por día llegás al '+fechaCorta(S.proxCobro)+' sin pedir prestado.'});
+
+  // 4. categorías pasadas o que a este ritmo se pasan
+  S.grupos.forEach(function(g){ if(g.id==='aho') return;
+    g.cats.forEach(function(ct){
+      var real = num(ct.real), meta = num(ct.meta);
+      if(meta<=0) return;
+      if(real > meta){
+        L.push({id:'pasada-'+ct.id, nivel:2, peso:real-meta, firma:''+redondo(real), t:'«'+ct.nm+'» se pasó',
+          p:'Llevás '+gs(real)+' y te habías propuesto '+gs(meta)+': '+gs(real-meta)+' de más. Eso sale de otra categoría o del ahorro.'});
+        return;
+      }
+      if(g.id!=='var' || ci.trans < 5) return;
+      var proy = Math.round(real/ci.frac);
+      if(proy > meta*1.1){
+        var quedan = Math.max(1, ci.total-ci.trans), porDia = Math.floor((meta-real)/quedan);
+        L.push({id:'ritmo-'+ct.id, nivel:2, peso:proy-meta, firma:''+redondo(real), t:'A este ritmo «'+ct.nm+'» se pasa',
+          p:'Vas '+gs(real)+' y el mes termina cerca de '+gs(proy)+' (te propusiste '+gs(meta)+'). '+(porDia < 5000
+            ? 'Te quedan solo '+gs(meta-real)+' para los '+quedan+' días que faltan.'
+            : 'Para no pasarte, gastá hasta '+gs(porDia)+' por día en esto.')});
+      }
+    });
+  });
+
+  // 5. gastando más que el mes pasado
+  var H = S.historial||[], ult = H[H.length-1];
+  if(ult && num(ult.gastado)>0 && ci.trans>=5){
+    var gvA = grupoVar(), varReal = gvA? totalGrupo(gvA,'real') : 0, gastadoAhora = gastadoCicloTotal(), proyT = Math.round(gastadoAhora - varReal + varReal/ci.frac); // los fijos no crecen con los días
+    if(proyT > num(ult.gastado)*1.2)
+      L.push({id:'masQueAntes', nivel:2, peso:proyT-num(ult.gastado), firma:''+redondo(gastadoAhora), t:'Vas gastando más que el mes pasado',
+        p:'A este ritmo el mes cierra cerca de '+gs(proyT)+'. En '+esc(ult.etiqueta)+' gastaste '+gs(ult.gastado)+'. Mirá en Presupuesto qué categoría está tirando para arriba.'});
+  }
+
+  // 6. aporte del mes para la meta
+  var mr = metasResumen(), aportadoMes = 0;
+  S.metas.forEach(function(m){ m.aportes.forEach(function(a){ if(String(a.fe).slice(0,7)===hoy.slice(0,7)) aportadoMes += num(a.mt); }); });
+  if(aportadoMes===0 && mr.falta>0 && c.libre>0)
+    L.push({id:'aporte', nivel:1, peso:S.metas.reduce(function(a,m){ return a+num(m.aporte); },0), firma:hoy.slice(0,7), t:'Te falta el aporte de este mes',
+      p:'Todavía no apartaste nada para tu meta. Si lo hacés ahora y no a fin de mes, no lo vas a extrañar.', acc:'irAho', accTxt:'Ir a Ahorros'});
+
+  // 7. plata sin asignar en el presupuesto
+  var sobra = totalIngresos() - totalMetasTodo();
+  if(sobra > 0 && totalMetasTodo() > 0){
+    var m0 = S.metas[0], efecto = '';
+    if(m0 && S.metas.length===1){
+      var falta0 = Math.max(0, num(m0.obj) - m0.aportes.reduce(function(a,x){ return a+num(x.mt); },0));
+      if(falta0>0 && num(m0.aporte)>0){
+        var antes = Math.ceil(falta0/num(m0.aporte)), despues = Math.ceil(falta0/(num(m0.aporte)+sobra));
+        if(antes>despues) efecto = ' Si lo sumás a «'+m0.nm+'», llegás '+mesesTxt(antes-despues)+' antes.';
+      }
+    }
+    L.push({id:'sinAsignar', nivel:1, peso:sobra, firma:''+redondo(sobra), t:'Te sobran '+gs(sobra)+' sin asignar',
+      p:'Lo que entra es más que lo que te propusiste gastar y ahorrar. Si no le das un destino, se va solo.'+efecto, acc:'sumarAhorro', arg:''+sobra, accTxt:'Sumarlo al ahorro'});
+  }
+
+  // 8. gasto fuera de lo común
+  var porCat = {};
+  S.gastos.forEach(function(g){ if(g.cat){ (porCat[g.cat] = porCat[g.cat]||[]).push(num(g.mt)); } });
+  S.gastos.forEach(function(g){
+    var xs = porCat[g.cat]||[];
+    if(xs.length < 3 || num(g.mt) < 100000) return;
+    var med = mediana(xs);
+    if(med>0 && num(g.mt) > med*2.5){
+      var ct = catPorId(g.cat);
+      L.push({id:'raro-'+g.id, nivel:1, peso:num(g.mt)-med, firma:'1', t:'Un gasto más grande de lo normal',
+        p:'Anotaste '+gs(g.mt)+(g.nm?' («'+esc(g.nm)+'»)':'')+' en '+(ct?esc(ct.nm):'una categoría')+', cuando lo habitual ahí es '+gs(med)+'. Si fue un error de tipeo, corregilo en «Lo que anotaste».'});
+    }
+  });
+
+  // 9. suscripciones: cuánto cuestan al año
+  S.grupos.forEach(function(g){ g.cats.forEach(function(ct){
+    if(!/suscrip/i.test(ct.nm) || num(ct.meta)<=0 || num(ct.real)>num(ct.meta)) return;
+    L.push({id:'susc-'+ct.id, nivel:1, peso:num(ct.meta)*12/10, firma:''+redondo(ct.meta), t:'Tus suscripciones: '+gs(num(ct.meta)*12)+' al año',
+      p:'Son '+gs(ct.meta)+' por mes. Una vez por año vale la pena revisar si las usás todas: cada una que des de baja es plata que vuelve todos los meses.'});
+  }); });
+
+  // 10. si no hay nada que mirar con atención: cómo viene el mes
+  if(!L.some(function(x){ return x.nivel>=2; })){
+    var gv = grupoVar(), metaV = gv? totalGrupo(gv,'meta') : 0, realV = gv? totalGrupo(gv,'real') : 0;
+    var pctG = metaV>0? Math.round(realV/metaV*100) : 0, pctC = Math.round(ci.trans/ci.total*100);
+    var p0 = metaV>0
+      ? 'Llevás gastado el '+pctG+'% de tus variables y ya pasó el '+pctC+'% del mes. Tenés '+gs(c.libre)+' libres para '+c.dias+' días.'
+      : 'Tenés '+gs(c.libre)+' libres para '+c.dias+' días. Si te sobra al final del ciclo, mandalo a la meta antes de que se evapore.';
+    L.push({id:'bien', nivel:0, peso:0, firma:hoy.slice(0,7)+'-'+Math.round(pctG/10), t:aportadoMes>0? 'Mes redondo'+(S.nombre?', '+S.nombre:'') : 'Vas bien', p:p0});
+  }
+
+  var ocultos = S.asesorOcultos||{};
+  L = L.filter(function(x){ return ocultos[x.id]!==x.firma; });
+  L.sort(function(a,b){ return (b.nivel-a.nivel) || (b.peso-a.peso); });
+  return L;
+}
+function gastadoCicloTotal(){
+  var t = 0;
+  S.grupos.forEach(function(g){ if(g.id!=='aho') t += totalGrupo(g,'real'); });
+  return t;
+}
+var NIVEL_CLS = ['ok','info','mid','bad'];
+function renderAsesor(c, cs){
+  var L = consejos(), s = [];
+  if(!L.length) return '';
+  var ver = asesorAbierto? L : L.slice(0,3);
+  s.push('<div class="asesor">');
+  ver.forEach(function(x){
+    s.push('<div class="consejo '+NIVEL_CLS[x.nivel]+'"><b>'+x.t+'</b>'+x.p);
+    if(x.id!=='empezar'){
+      s.push('<div class="as-acts">');
+      if(x.acc) s.push('<button class="btn mini" data-act="asesorAccion" data-acc="'+x.acc+'" data-arg="'+esc(x.arg||'')+'">'+x.accTxt+'</button>');
+      s.push('<button class="btn mini ghost" data-act="asesorOk" data-id="'+esc(x.id)+'">Entendido</button></div>');
+    }
+    s.push('</div>');
+  });
+  if(L.length>3) s.push('<button class="as-mas" data-act="asesorMas">'+(asesorAbierto? 'Ver menos' : 'Ver '+(L.length-3)+(L.length-3===1?' consejo más':' consejos más'))+'</button>');
+  s.push('<p class="as-nota">Sugerencias automáticas sobre tus propios números. No reemplazan a un asesor financiero profesional.</p>');
+  s.push('</div>');
+  return s.join('');
+}
+function accionAsesor(acc, arg){
+  if(acc==='irAho'){ irTab('aho'); return; }
+  if(acc==='sumarAhorro'){
+    var mt = num(arg), ga = grupoAho();
+    if(mt<=0) return;
+    if(ga && ga.cats[0]) ga.cats[0].meta = num(ga.cats[0].meta) + mt;
+    if(S.metas.length===1) S.metas[0].aporte = num(S.metas[0].aporte) + mt;
+    render();
+    estado('Sumado: '+gs(mt)+' más por mes al ahorro.');
+  }
+}
+
+/* ==================== evolución mes a mes ==================== */
+function fotoCategorias(){
+  var o = {};
+  S.grupos.forEach(function(g){ if(g.id==='aho') return; g.cats.forEach(function(ct){ o[ct.id] = {nm:ct.nm, g:g.id, real:num(ct.real), meta:num(ct.meta)}; }); });
+  return o;
+}
+function presupuestoGasto(){
+  return S.grupos.reduce(function(a,g){ return g.id==='aho'? a : a+totalGrupo(g,'meta'); },0);
+}
+function renderEvolucion(H){
+  var ci = cicloInfo(), s = [];
+  var serie = H.slice(-11).map(function(m){
+    return {lab:String(m.etiqueta).split(' ')[0].slice(0,3), gastado:num(m.gastado), ref:num(m.presupuesto), ing:num(m.salario)+num(m.extra), aho:num(m.aho), actual:false};
+  });
+  var ga = grupoAho();
+  serie.push({lab:MESES[new Date().getMonth()].slice(0,3)+'*', gastado:gastadoCicloTotal(), ref:presupuestoGasto(), aho:ga? totalGrupo(ga,'real') : 0, actual:true});
+  var ancho = serie.length>6? ' style="min-width:'+(serie.length*46)+'px"' : '';
+
+  // 1. gasto contra presupuesto
+  var maxG = Math.max.apply(null, serie.map(function(x){ return Math.max(x.gastado, x.ref); }).concat([1]));
+  s.push('<div class="card pad evo"><div class="rt-lab">Gasto de cada mes contra lo que te propusiste</div><div class="evo-scroll"><div class="trend"'+ancho+'>');
+  serie.forEach(function(x){
+    var h = Math.round(x.gastado/maxG*100), r = Math.round(x.ref/maxG*100), pasado = x.ref>0 ? x.gastado>x.ref : (x.ing>0 && x.gastado>x.ing); // meses viejos sin presupuesto guardado: contra lo que entró
+    s.push('<div class="trend-col'+(x.actual?' actual':'')+'"><div class="evo-v num">'+abrev(x.gastado)+'</div><div class="trend-bar">'+
+      (r>0? '<div class="evo-ref" style="bottom:'+Math.min(r,100)+'%"></div>' : '')+
+      '<div class="tb '+(pasado?'bad':'ok')+'" style="height:'+h+'%"></div></div><div class="trend-lab">'+esc(x.lab)+'</div></div>');
+  });
+  s.push('</div></div><div class="evo-ley"><span><i class="ok"></i>Dentro</span><span><i class="bad"></i>Te pasaste</span><span><i class="ref"></i>Lo propuesto</span><span>* mes en curso</span></div></div>');
+
+  // 2. ahorro por mes
+  var maxA = Math.max.apply(null, serie.map(function(x){ return x.aho; }).concat([1]));
+  var totA = serie.reduce(function(a,x){ return a+x.aho; },0);
+  s.push('<div class="card pad evo"><div class="rt-lab">Lo que ahorraste cada mes</div><div class="evo-scroll"><div class="trend"'+ancho+'>');
+  serie.forEach(function(x){
+    s.push('<div class="trend-col'+(x.actual?' actual':'')+'"><div class="evo-v num">'+abrev(x.aho)+'</div><div class="trend-bar"><div class="tb aho" style="height:'+Math.round(x.aho/maxA*100)+'%"></div></div><div class="trend-lab">'+esc(x.lab)+'</div></div>');
+  });
+  s.push('</div></div><div class="evo-ley"><span>En total: <b class="num">'+gs(totA)+'</b></span></div></div>');
+
+  // 3. categorías contra su promedio
+  var conCat = H.filter(function(m){ return m.porCat; }).slice(-6);
+  s.push('<div class="card pad evo"><div class="rt-lab">Este mes contra tu promedio</div>');
+  if(!conCat.length){
+    s.push('<p class="sub" style="margin:0">La comparación por categoría empieza después del próximo cierre de mes: desde ahora cada cierre guarda cuánto gastaste en cada cosa.</p>');
+  }else{
+    s.push('<p class="sub" style="margin:0 0 8px">Promedio de '+(conCat.length===1?'tu último mes':'tus últimos '+conCat.length+' meses')+' contra lo que va a dar este mes si seguís a este ritmo.</p>');
+    var filas = [];
+    S.grupos.forEach(function(g){ if(g.id==='aho') return; g.cats.forEach(function(ct){
+      var vals = conCat.map(function(m){ return m.porCat[ct.id]? num(m.porCat[ct.id].real) : null; }).filter(function(v){ return v!==null; });
+      if(!vals.length) return;
+      var prom = Math.round(vals.reduce(function(a,v){ return a+v; },0)/vals.length);
+      if(prom<=0 && num(ct.real)<=0) return;
+      var proy = g.id==='var'? Math.round(num(ct.real)/ci.frac) : num(ct.real);
+      filas.push({nm:ct.nm, prom:prom, proy:proy, d: prom>0? Math.round((proy-prom)/prom*100) : null});
+    }); });
+    filas.sort(function(a,b){ return (b.d===null?0:b.d)-(a.d===null?0:a.d); });
+    s.push('<div class="evo-cats">');
+    filas.forEach(function(x){
+      var dtxt = (ci.trans<5 || x.d===null)? '—' : (x.d>0?'+':'')+x.d+'%';
+      var cls = (ci.trans<5 || x.d===null)? '' : (x.d>15? 'sube' : (x.d<-15? 'baja' : ''));
+      s.push('<div class="evo-cat"><span class="nm">'+esc(x.nm)+'</span><span class="num">'+gsc(x.prom)+'</span><span class="num">'+gsc(x.proy)+'</span><span class="num d '+cls+'">'+dtxt+'</span></div>');
+    });
+    s.push('</div><div class="evo-ley"><span>Promedio · Este mes · Diferencia</span>'+(ci.trans<5?'<span>Los primeros 5 días no se compara: es muy pronto.</span>':'')+'</div>');
+  }
+  s.push('</div>');
+  return s.join('');
+}
+function abrev(n){
+  n = num(n);
+  if(n>=1000000) return (Math.round(n/100000)/10).toString().replace('.',',')+'M';
+  if(n>=1000) return Math.round(n/1000)+'k';
+  return n? String(n) : '0';
 }
 
 /* ==================== render: PRESUPUESTO ==================== */
@@ -1159,6 +1439,7 @@ function togglePend(id){
   render();
 }
 function cerrarCiclo(){
+  S.asesorOcultos = {};
   S.grupos.forEach(function(g){ g.cats.forEach(function(c){ c.real = 0; }); });
   S.gastos = [];
   S.ingresosExtra = [];
@@ -1218,7 +1499,8 @@ function archivarCiclo(){
   S.historial.push({
     id:uid(), etiqueta:etiqueta, desde:desde, hasta:hasta,
     salario:salario, extra:extra, gastado:gastado,
-    fijos:fijos, vary:vary, aho:aho, saldoCierre:num(S.saldo)
+    fijos:fijos, vary:vary, aho:aho, saldoCierre:num(S.saldo),
+    porCat:fotoCategorias(), presupuesto:presupuestoGasto()
   });
   if(S.historial.length>60) S.historial = S.historial.slice(-60);
   return true;
@@ -1282,21 +1564,12 @@ function renderHist(){
   s.push('<p class="sub">Una foto de cada mes cerrado. Se guarda solo cada vez que apretás \u00abCobr\u00e9\u00bb el mes siguiente.</p>');
   s.push('<button class="btn ghost" style="margin:6px 0 4px" data-act="abrirCerrarMes">Cerrar el mes actual ahora</button>');
   if(!H.length){
+    s.push(renderEvolucion(H));
     s.push('<div class="card vacio" style="margin-top:6px">Todav\u00eda no hay meses cerrados.<br>El primer resumen aparece cuando cobres el mes que viene y arranque un ciclo nuevo.</div>');
     el('tab-hist').innerHTML = s.join('');
     return;
   }
-  if(H.length>=2){
-    var ult = H.slice(-6);
-    var maxG = Math.max.apply(null, ult.map(function(m){ return Math.max(num(m.gastado), num(m.salario)+num(m.extra)); }));
-    s.push('<div class="card pad"><div class="rt-lab">Gasto por mes</div><div class="trend">');
-    ult.forEach(function(m){
-      var h = maxG>0? Math.round(num(m.gastado)/maxG*100):0;
-      var sup = (num(m.salario)+num(m.extra)) >= num(m.gastado);
-      s.push('<div class="trend-col"><div class="trend-bar"><div class="tb '+(sup?'ok':'bad')+'" style="height:'+h+'%"></div></div><div class="trend-lab">'+esc(m.etiqueta.split(' ')[0].slice(0,3))+'</div></div>');
-    });
-    s.push('</div></div>');
-  }
+  s.push(renderEvolucion(H));
   H.slice().reverse().forEach(function(m){
     var ingreso = num(m.salario)+num(m.extra);
     var bal = ingreso - num(m.gastado) - num(m.aho);
@@ -1432,6 +1705,9 @@ document.addEventListener('click', function(ev){
     render(); estado('Gasto deshecho.'); return;
   }
   if(a==='togglePend'){ togglePend(id); return; }
+  if(a==='asesorOk'){ var cx = consejos().filter(function(x){ return x.id===id; })[0]; if(cx){ S.asesorOcultos = S.asesorOcultos||{}; S.asesorOcultos[id] = cx.firma; } render(); estado('Listo, no te lo muestro más (salvo que cambien los números).'); return; }
+  if(a==='asesorMas'){ asesorAbierto = !asesorAbierto; renderHoy(); return; }
+  if(a==='asesorAccion'){ accionAsesor(b.dataset.acc, b.dataset.arg); return; }
   if(a==='delPend'){ S.pendientes = S.pendientes.filter(function(x){ return x.id!==id; }); render(); return; }
   if(a==='addPend'){
     var nm=(el('pNm').value||'').trim(), mt=num(el('pMt').value), fe=el('pFe').value||hoyISO();
