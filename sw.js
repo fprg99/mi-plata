@@ -2,7 +2,7 @@
 // Estrategia: primero la red (así siempre llega la última versión) y, si no hay
 // conexión o tarda demasiado, lo último que se guardó en el teléfono.
 // Los datos de la persona no pasan por acá: viven en localStorage.
-var CACHE = 'mi-plata-v4';
+var CACHE = 'mi-plata-v5';
 var BASICOS = ['./', './index.html'];
 var ESPERA_MS = 4000; // con señal muy mala, no hacer esperar más que esto
 

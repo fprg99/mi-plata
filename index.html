@@ -859,7 +859,6 @@ function grupoVar(){ return S.grupos.filter(function(g){ return g.id==='var'; })
 function grupoAho(){ return S.grupos.filter(function(g){ return g.id==='aho'; })[0]; }
 function totalMetasTodo(){ return S.grupos.reduce(function(a,g){ return a+totalGrupo(g,'meta'); },0); }
 function redondo(n){ return Math.round(num(n)/10000); } // para la firma: cambios chicos no reviven el consejo
-function mediana(xs){ var a=xs.slice().sort(function(x,y){ return x-y; }), m=Math.floor(a.length/2); return a.length? (a.length%2? a[m] : (a[m-1]+a[m])/2) : 0; }
 function mesesTxt(n){ return n===1? '1 mes' : n+' meses'; }
 
 function consejos(){
@@ -946,19 +945,6 @@ function consejos(){
     L.push({id:'sinAsignar', nivel:1, peso:sobra, firma:''+redondo(sobra), t:'Te sobran '+gs(sobra)+' sin asignar',
       p:'Lo que entra es más que lo que te propusiste gastar y ahorrar. Si no le das un destino, se va solo.'+efecto, acc:'sumarAhorro', arg:''+sobra, accTxt:'Sumarlo al ahorro'});
   }
-
-  // 8. gasto fuera de lo común
-  S.gastos.forEach(function(g){
-    var otros = S.gastos.filter(function(x){ return x.cat===g.cat && x.id!==g.id; }).map(function(x){ return num(x.mt); });
-    if(otros.length < 3 || num(g.mt) < 100000) return;
-    var med = mediana(otros);
-    if(med>0 && num(g.mt) > med*2.5){
-      var ct = catPorId(g.cat);
-      L.push({id:'raro-'+g.id, nivel:1, peso:num(g.mt)-med, firma:'1', t:'¿Este monto está bien?',
-        p:'Anotaste un gasto de '+gs(g.mt)+(g.nm?' («'+esc(g.nm)+'»)':'')+' en '+(ct?esc(ct.nm):'una categoría')+'. Tus otros gastos ahí suelen ser de unos '+gs(med)+'. '+
-          'Si está bien, tocá «Entendido». Si te equivocaste al escribirlo, corregilo en «Lo que anotaste».'});
-    }
-  });
 
   // 9. suscripciones: cuánto cuestan al año
   S.grupos.forEach(function(g){ g.cats.forEach(function(ct){
